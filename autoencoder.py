@@ -59,6 +59,8 @@ class TextAutoencoder(object):
         self.decoder_step_input = tf.placeholder(tf.int32,
                                                  [None],
                                                  'prediction_step')
+        self.sentence_ = tf.placeholder(tf.int32, [None, None], 'sentence_')
+        self.sentence_size_ = tf.placeholder(tf.int32, [None], 'sentence_size_')
         with tf.device('/cpu:0'):
             self.global_step = tf.Variable(0, name='gloabal_step', trainable=False)
             name = 'decoder_fw_step_state_c'
@@ -81,17 +83,22 @@ class TextAutoencoder(object):
             with tf.device('/gpu:%d' % i):
                 with tf.name_scope('tower_%d' % i) as scope:
                     if train:
-                        loss = self.tower(embeddings,
-                                   tf.gather(self.sentence, [i]),
-                                   tf.gather(self.sentence_size, [i]),
+                        self.sentence_train = tf.gather(self.sentence, [i])
+                        self.sentence_size_train = tf.gather(self.sentence_size, [i])
+                    else:
+                        self.sentence_train = self.sentence_
+                        self.sentence_size_train = self.sentence_size_
+                    loss = self.tower(embeddings,
+                                   self.sentence_train,
+                                   self.sentence_size_train,
                                    train_embeddings)
-                        # Reuse variables for the next tower
-                        tf.get_variable_scope().reuse_variables()
-                        grads, v = zip(*self.opt.compute_gradients(loss))
-                        grads, _ = tf.clip_by_global_norm(grads, self.clip_value)
-                        towerGrads.append(zip(grads, v))
-                        towerloss.append(loss *
-                                tf.shape(tf.gather(self.sentence_size, [i]))[1])
+                    # Reuse variables for the next tower
+                    tf.get_variable_scope().reuse_variables()
+                    grads, v = zip(*self.opt.compute_gradients(loss))
+                    grads, _ = tf.clip_by_global_norm(grads, self.clip_value)
+                    towerGrads.append(zip(grads, v))
+                    towerloss.append(loss *
+                            tf.shape(tf.gather(self.sentence_size, [i]))[1])
         avgGrad_var_s = self.average_tower_grads(towerGrads)
         self.apply_gradient_op = self.opt.apply_gradients(avgGrad_var_s,
                                                           global_step=None)
@@ -281,6 +288,7 @@ class TextAutoencoder(object):
         metadata = {'vocab_size': self.vocab_size,
                     'embedding_size': self.embedding_size,
                     'num_units': self.lstm_fw.output_size,
+                    'num_gpus': self.num_gpus,
                     'go': self.go,
                     }
         metadata_path = os.path.join(directory, 'metadata.json')
@@ -306,7 +314,7 @@ class TextAutoencoder(object):
                                     dtype=np.float32)
 
         ae = TextAutoencoder(metadata['num_units'], dummy_embeddings,
-                             metadata['go'], train=train)
+                             metadata['go'], metadata['num_gpus'], train=train)
         vars_to_load = ae.get_trainable_variables()
         if not train:
             # if not flagged for training, the embeddings won't be in
@@ -325,8 +333,8 @@ class TextAutoencoder(object):
         :param sizes: 1-d array with size of each sentence
         :return: a 2-d numpy array with the hidden state
         """
-        feeds = {self.sentence: inputs,
-                 self.sentence_size: sizes,
+        feeds = {self.sentence_: inputs,
+                 self.sentence_size_: sizes,
                  self.dropout_keep: 1}
         state = session.run(self.encoded_state, feeds)
         return state.c
@@ -343,8 +351,8 @@ class TextAutoencoder(object):
             batch or reaching two times the maximum number of time
             steps in the inputs.
         """
-        feeds = {self.sentence: inputs,
-                 self.sentence_size: sizes,
+        feeds = {self.sentence_: inputs,
+                 self.sentence_size_: sizes,
                  self.dropout_keep: 1}
         state = session.run(self.encoded_state, feeds)
 
@@ -413,4 +421,11 @@ class TextAutoencoder(object):
         all_g = tf.concat(0, grads)
         avg_g = tf.reduce_mean(all_g, 0, keep_dims=False)
         avgGrad_var_s.append((avg_g, v))
-      return avgGrad_var_s    
+      return avgGrad_var_s
+
+
+
+
+
+
+  
