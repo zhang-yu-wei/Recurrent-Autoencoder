@@ -35,17 +35,13 @@ class TextAutoencoder(object):
         self.embedding_size = embeddings.shape[1]
         self.num_gpus = num_gpus
         self.lstm_units = lstm_units
+        self.embeddings = tf.Variable(embeddings, name='embeddings',
+                                          trainable=train_embeddings)
         self.g = tf.Graph()
         with self.g.as_default():
             self.build_model(embeddings, train, train_embeddings)
-            config = tf.ConfigProto(log_device_placement=True)
-            config.gpu_options.allow_growth = True
-            self.session = tf.InteractiveSession(graph=self.g, config=config)
-            ini = tf.global_variables_initializer()
-            self.session.run(ini)
             self.saver = tf.train.Saver(self.get_trainable_variables(),
                                max_to_keep=1)
-        self.g.finalize()
 
     def build_model(self, embeddings, train=True, train_embeddings=False):
         # the sentence is the object tobe memorized
@@ -69,12 +65,8 @@ class TextAutoencoder(object):
             name = 'decoder_fw_step_state_h'
             self.decoder_fw_step_h = tf.placeholder(tf.float32,
                                                     [None, self.lstm_units], name)
-            self.decoder_bw_step_c = tf.placeholder(tf.float32,
-                                                    [None, self.lstm_units],
-                                                    'decoder_bw_step_state_c')
-            self.decoder_bw_step_h = tf.placeholder(tf.float32,
-                                                    [None, self.lstm_units],
-                                                    'decoder_bw_step_state_h')
+            self.lstm_fw = tf.nn.rnn_cell.LSTMCell(self.lstm_units,
+                                    initializer=tf.glorot_normal_initializer())
             self.opt = tf.train.AdamOptimizer(self.learning_rate)
 
         towerGrads = []
@@ -83,39 +75,30 @@ class TextAutoencoder(object):
             with tf.device('/gpu:%d' % i):
                 with tf.name_scope('tower_%d' % i) as scope:
                     if train:
-                        self.sentence_train = tf.gather(self.sentence, [i])
-                        self.sentence_size_train = tf.gather(self.sentence_size, [i])
+                        self.sentence_run = tf.gather(self.sentence, [i])
+                        self.sentence_size_run = tf.gather(self.sentence_size, [i])
                     else:
-                        self.sentence_train = self.sentence_
-                        self.sentence_size_train = self.sentence_size_
+                        self.sentence_run = self.sentence_
+                        self.sentence_size_run = self.sentence_size_
                     loss = self.tower(embeddings,
-                                   self.sentence_train,
-                                   self.sentence_size_train,
+                                   self.sentence_run,
+                                   self.sentence_size_run,
                                    train_embeddings)
                     # Reuse variables for the next tower
                     tf.get_variable_scope().reuse_variables()
                     grads, v = zip(*self.opt.compute_gradients(loss))
                     grads, _ = tf.clip_by_global_norm(grads, self.clip_value)
                     towerGrads.append(zip(grads, v))
-                    towerloss.append(loss *
-                            tf.shape(tf.gather(self.sentence_size, [i]))[1])
+                    towerloss.append(loss)
         avgGrad_var_s = self.average_tower_grads(towerGrads)
         self.apply_gradient_op = self.opt.apply_gradients(avgGrad_var_s,
                                                           global_step=None)
-        self.loss = tf.divide(tf.reduce_sum(towerloss),
-                              tf.shape(self.sentence_size)[1])
+        self.loss = tf.reduce_sum(towerloss) / self.num_gpus
         self.add_global = self.global_step.assign_add(1)
 
     def tower(self, embeddings, sentence,
               sentence_size, train_embeddings=False):
         with tf.variable_scope('autoencoder') as self.scope:
-            self.embeddings = tf.Variable(embeddings, name='embeddings',
-                                          trainable=train_embeddings)
-
-            initializer = tf.glorot_normal_initializer()
-            self.lstm_fw = tf.nn.rnn_cell.LSTMCell(self.lstm_units,
-                                                   initializer=initializer)
-
             embedded = tf.nn.embedding_lookup(self.embeddings, sentence)
             embedded = tf.nn.dropout(embedded, self.dropout_keep)
 
@@ -203,7 +186,7 @@ class TextAutoencoder(object):
         tf.add_to_collection('losses', loss)
         return loss
 
-    def train(self, save_path, train_data, valid_data, batch_size, epochs,
+    def train(self, sess, save_path, train_data, valid_data, batch_size, epochs,
              learning_rate, dropout_keep, clip_value, report_interval):
         """
         Train the model
@@ -274,17 +257,17 @@ class TextAutoencoder(object):
                 msg += 'Avg batch loss: %f\t' % avg_loss
                 msg += 'Validation loss: %f' % loss
 
-                self.save(save_path)
+                self.save(sess, save_path)
                 msg += '\t(saved model)'
                 logging.info(msg)
 
-    def save(self, directory):
+    def save(self, sess, directory):
         """
         Save the autoencoder model and metadata to the specified
         directory
         """
         model_path = os.path.join(directory, 'model')
-        self.saver.save(self.session, model_path)
+        self.saver.save(sess, model_path)
         metadata = {'vocab_size': self.vocab_size,
                     'embedding_size': self.embedding_size,
                     'num_units': self.lstm_fw.output_size,
@@ -422,6 +405,8 @@ class TextAutoencoder(object):
         avg_g = tf.reduce_mean(all_g, 0, keep_dims=False)
         avgGrad_var_s.append((avg_g, v))
       return avgGrad_var_s
+
+
 
 
 
