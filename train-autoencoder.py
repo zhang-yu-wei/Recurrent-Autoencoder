@@ -85,9 +85,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
-    config = tf.ConfigProto(log_device_placement=True)
-    config.gpu_options.allow_growth = True
-    sess = tf.InteractiveSession(config=config)
     wd = utils.WordDictionary(args.vocab)
     embeddings = load_or_create_embeddings(args.embeddings, wd.vocabulary_size,
                                            args.embedding_size)
@@ -103,10 +100,12 @@ if __name__ == '__main__':
                                         embeddings, wd.eos_index, args.num_gpus,
                                         train_embeddings=train_embeddings,
                                         )
-
+    config = tf.ConfigProto(log_device_placement=True)
+    config.gpu_options.allow_growth = True
+    sess = tf.InteractiveSession(graph=model.g, config=config)
     sess.run(tf.global_variables_initializer())
     show_parameter_count(model.get_trainable_variables())
     logging.info('Initialized the model and all variables. Starting training.')
-    model.train(args.save_dir, train_data, valid_data, args.batch_size,
+    model.train(sess, args.save_dir, train_data, valid_data, args.batch_size,
                 args.num_epochs, args.learning_rate,
                 args.dropout_keep, 5.0, report_interval=args.interval)
