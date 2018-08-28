@@ -22,10 +22,12 @@ if __name__ == '__main__':
                         default=10, dest='max_length', type=int)
     parser.add_argument('-n', help='example number',
                         default=10000, dest='num_examples', type=int)
+    parser.add_argument('output', help='output file name')
     args = parser.parse_args()
     sents = create_data(args.num_vocabs, args.max_length, args.num_examples)
     text = '\n'.join(sents)
-    with open('data.txt', 'wb') as f:
+    path = args.output + '.txt'
+    with open(path, 'wb') as f:
         f.write(text.encode('utf-8'))
 
 

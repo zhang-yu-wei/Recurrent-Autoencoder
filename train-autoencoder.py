@@ -55,27 +55,23 @@ if __name__ == '__main__':
     parser.add_argument('save_dir', help='Directory to file to save trained '
                                          'model')
     parser.add_argument('-n', help='Embedding size (if embeddings not given)',
-                        default=5, dest='embedding_size', type=int)
+                        default=50, dest='embedding_size', type=int)
     parser.add_argument('-u', help='Number of LSTM units (when using a '
                                    'bidirectional model, this is doubled in '
-                                   'practice)', default=150,
+                                   'practice)', default=300,
                         dest='lstm_units', type=int)
     parser.add_argument('-r', help='Initial learning rate', default=0.001,
                         dest='learning_rate', type=float)
-    parser.add_argument('-b', help='Batch size', default=32,
+    parser.add_argument('-b', help='Batch size', default=100,
                         dest='batch_size', type=int)
-    parser.add_argument('-e', help='Number of epochs', default=500,
+    parser.add_argument('-e', help='Number of epochs', default=5000,
                         dest='num_epochs', type=int)
     parser.add_argument('-d', help='Dropout keep probability', type=float,
                         dest='dropout_keep', default=1.0)
     parser.add_argument('-i',
                         help='Number of batches between performance report',
-                        dest='interval', type=int, default=100)
+                        dest='interval', type=int, default=1000)
     parser.add_argument('-g', help='gpu number', dest='num_gpus', type=int, default=2)
-    parser.add_argument('--te', help='Train embeddings. If not given, they are '
-                                     'frozen. (always true if embeddings are '
-                                     'not given)',
-                        action='store_true', dest='train_embeddings')
     parser.add_argument('--embeddings',
                         help='Numpy embeddings file. If not supplied, '
                              'random embeddings are generated.')
@@ -95,15 +91,15 @@ if __name__ == '__main__':
     valid_data = utils.load_binary_data(args.valid)
     logging.info('Creating model')
 
-    train_embeddings = args.train_embeddings if args.embeddings else True
     model = autoencoder.TextAutoencoder(args.lstm_units,
-                                        embeddings, wd.eos_index, args.num_gpus,
-                                        train_embeddings=train_embeddings,
+                                        embeddings, wd.eos_index, args.num_gpus
                                         )
-    config = tf.ConfigProto(log_device_placement=True)
+    config = tf.ConfigProto(allow_soft_placement = True)
     config.gpu_options.allow_growth = True
+    config.gpu_options.allocator_type = 'BFC'
     sess = tf.InteractiveSession(graph=model.g, config=config)
     sess.run(tf.global_variables_initializer())
+    model.g.finalize()
     show_parameter_count(model.get_trainable_variables())
     logging.info('Initialized the model and all variables. Starting training.')
     model.train(sess, args.save_dir, train_data, valid_data, args.batch_size,

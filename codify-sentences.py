@@ -24,8 +24,7 @@ if __name__ == '__main__':
 
     wd = utils.WordDictionary(args.vocabulary)
     sentences, sizes = utils.load_text_data(args.input, wd)
-    sess = tf.InteractiveSession()
-    model = TextAutoencoder.load(args.model, sess)
+    model, sess = TextAutoencoder.load(args.model)
 
     # feed blocks of 5k sentences
     num_sents = 5000
