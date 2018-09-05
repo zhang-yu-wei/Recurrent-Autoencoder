@@ -350,7 +350,7 @@ class TextAutoencoder(object):
         state_fw = state
 
         time_steps = 0
-        max_time_steps = 2 * len(inputs[0])
+        max_time_steps = len(inputs[0])
         answer = []
         input_symbol = self.go * np.ones_like(sizes, dtype=np.int32)
 
@@ -371,8 +371,7 @@ class TextAutoencoder(object):
             outputs, state_fw = session.run(ops, feeds)
 
             input_symbol = outputs.argmax(1)
-            answer.append(input_symbol)
-
+            
             # use an "additive" or in order to avoid infinite loops
             sequences_done |= (input_symbol == self.eos)
 
@@ -380,7 +379,7 @@ class TextAutoencoder(object):
                 break
             else:
                 time_steps += 1
-
+            answer.append(input_symbol)
         return np.hstack(answer)
 
     def get_trainable_variables(self):
