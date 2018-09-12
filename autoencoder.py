@@ -221,15 +221,16 @@ class TextAutoencoder(object):
 
             train_sents = []
             train_sizes = []
+            sents, sizes = train_data.next_batch(batch_size*self.num_gpus)
+            num_sents_ += len(sents)
+            #print(num_sents)
+            new_batch_size = len(sents) // self.num_gpus
             for i in range(self.num_gpus):
-                sents, sizes = train_data.next_batch(batch_size)
-                num_sents_ += len(sents)
-                train_sents.append(sents)
-                train_sizes.append(sizes)
+                train_sents.append(sents[i*new_batch_size:(i+1)*new_batch_size])
+                train_sizes.append(sizes[i*new_batch_size:(i+1)*new_batch_size])
 
             feeds[self.sentence] = train_sents
             feeds[self.sentence_size] = train_sizes
-
             _, loss = sess.run([self.apply_gradient_op, self.loss],
                                         feeds)
 
@@ -357,7 +358,6 @@ class TextAutoencoder(object):
         # this array control which sequences have already been finished by the
         # decoder, i.e., for which ones it already produced the END symbol
         sequences_done = np.zeros_like(sizes, dtype=np.bool)
-
         while True:
             # we could use tensorflow's rnn_decoder, but this gives us
             # finer control
@@ -371,15 +371,16 @@ class TextAutoencoder(object):
             outputs, state_fw = session.run(ops, feeds)
 
             input_symbol = outputs.argmax(1)
-            
+
             # use an "additive" or in order to avoid infinite loops
             sequences_done |= (input_symbol == self.eos)
 
-            if sequences_done.all() or time_steps > max_time_steps:
+            if sequences_done.all() or time_steps >= max_time_steps:
                 break
             else:
                 time_steps += 1
             answer.append(input_symbol)
+
         return np.hstack(answer)
 
     def get_trainable_variables(self):
