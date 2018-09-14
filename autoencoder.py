@@ -213,6 +213,9 @@ class TextAutoencoder(object):
         accumulated_loss = 0
         num_sents = 0
         num_sents_ = 0
+        EPOCHS = []
+        losses_tra = []
+        losses_val = []
 
         valid_sents, valid_sizes = valid_data.join_all(self.go, shuffle=True)
 
@@ -277,6 +280,10 @@ class TextAutoencoder(object):
                 self.save(sess, save_path)
                 msg += '\t(saved model)'
                 logging.info(msg)
+                EPOCHS.append(train_data.epoch_counter)
+                losses_tra.append(avg_loss)
+                losses_val.append(loss)
+        return EPOCHS, losses_tra, losses_val      
 
     def save(self, sess, directory):
         """
