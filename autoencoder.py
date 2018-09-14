@@ -230,6 +230,8 @@ class TextAutoencoder(object):
             num_sents_ += len(sents)
             #print(num_sents)
             new_batch_size = len(sents) // self.num_gpus
+            if new_batch_size < 10:
+                continue
             for i in range(self.num_gpus):
                 train_sents.append(sents[i*new_batch_size:(i+1)*new_batch_size])
                 train_sizes.append(sizes[i*new_batch_size:(i+1)*new_batch_size])
