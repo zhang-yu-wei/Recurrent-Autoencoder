@@ -90,7 +90,9 @@ class TextAutoencoder(object):
           self.apply_gradient_op = self.opt.apply_gradients(avgGrad_var_s,
                                               global_step=self.global_step)
           self.loss = tf.reduce_sum(towerloss) / self.num_gpus
+          tf.summary.scalar('loss', self.loss)
           self.add_global = self.global_step.assign_add(1)
+          self.merged = tf.summary.merge_all()
         else:
           with tf.variable_scope('train') as scope:
               self.lstm_fw = tf.nn.rnn_cell.LSTMCell(self.lstm_units,
@@ -204,6 +206,9 @@ class TextAutoencoder(object):
         :param clip_value:value to clip tensor norm during training
         :param report_interval:report after that many batches
         """
+        train_writer = tf.summary.FileWriter('summary' + '/train',
+                                      sess.graph)
+        valid_writer = tf.summary.FileWriter('summary' + '/valid')
         batch_counter = 0
         accumulated_loss = 0
         num_sents = 0
@@ -231,7 +236,7 @@ class TextAutoencoder(object):
 
             feeds[self.sentence] = train_sents
             feeds[self.sentence_size] = train_sizes
-            _, loss = sess.run([self.apply_gradient_op, self.loss],
+            _, loss, summary_tr = sess.run([self.apply_gradient_op, self.loss, self.merged],
                                         feeds)
 
             # multiply by len because some batches may be smaller
@@ -259,7 +264,9 @@ class TextAutoencoder(object):
                     self.sentence_size: valid_sizes_,
                     self.dropout_keep: 1}
 
-                loss = sess.run(self.loss, validation_feeds)
+                loss, summary_va = sess.run([self.loss, self.merged], validation_feeds)
+                train_writer.add_summary(summary_tr, train_data.epoch_counter)
+                valid_writer.add_summary(summary_va, train_data.epoch_counter)
                 msg = '%d epochs, %d batches\t' % (train_data.epoch_counter,
                                                    batch_counter)
                 msg += 'Avg batch loss: %f\t' % avg_loss
