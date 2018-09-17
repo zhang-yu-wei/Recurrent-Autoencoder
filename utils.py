@@ -75,7 +75,7 @@ class Dataset(object):
     def reset_epoch_counter(self):
         self.epoch_counter = 0
 
-    def next_batch(self, batch_size):
+    def next_batch(self, each_batch_size, num_gpus):
         """
         Return the next batch (keeping track of the last, or from the beginning
         if this is the first call).
@@ -88,11 +88,12 @@ class Dataset(object):
             items. If there are not enough `batch_size`, return as much
             as there are
         """
+        batch_size = each_batch_size * num_gpus
         matrix = self.sentence_matrices[self.last_matrix_ind]
         if self.next_batch_ind >= len(matrix):
             self.last_matrix_ind += 1
             if self.last_matrix_ind >= len(self.sentence_matrices):
-                self.epoch_counter += 1
+                self.epoch_counter += num_gpus
                 self.last_matrix_ind = 0
 
             self.next_batch_ind = 0
