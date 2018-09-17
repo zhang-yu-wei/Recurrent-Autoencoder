@@ -79,16 +79,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
-    path = args.data + 'vocabulary.txt'
+    path = args.data + '/vocabulary.txt'
     wd = utils.WordDictionary(path)
     embeddings = load_or_create_embeddings(args.embeddings, wd.vocabulary_size,
                                            args.embedding_size)
 
     logging.info('Reading training data')
-    path = args.data + 'train_data.npz'
+    path = args.data + '/train-data.npz'
     train_data = utils.load_binary_data(path)
     logging.info('Reading validation data')
-    path = args.data + 'valid_data.npz'
+    path = args.data + '/valid-data.npz'
     valid_data = utils.load_binary_data(path)
     logging.info('Creating model')
 
