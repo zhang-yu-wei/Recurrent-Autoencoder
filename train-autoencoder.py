@@ -102,6 +102,11 @@ if __name__ == '__main__':
     model.g.finalize()
     show_parameter_count(model.get_trainable_variables())
     logging.info('Initialized the model and all variables. Starting training.')
-    model.train(sess, args.save_dir, train_data, valid_data, args.batch_size,
+    EPOHCS, losses_tra, losses_val = model.train(sess, args.save_dir, train_data, valid_data, args.batch_size,
                 args.num_epochs, args.learning_rate,
                 args.dropout_keep, 5.0, report_interval=args.interval)
+
+    f = h5py.File("losses.hdf5", "w")
+    f['epochs'] = EPOCHS
+    f['train'] = losses_tra
+    f['valid'] = losses_val
