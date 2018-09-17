@@ -229,7 +229,7 @@ class TextAutoencoder(object):
 
             train_sents = []
             train_sizes = []
-            sents, sizes = train_data.next_batch(batch_size*self.num_gpus)
+            sents, sizes = train_data.next_batch(batch_size, self.num_gpus)
             num_sents_ += len(sents)
             #print(num_sents)
             new_batch_size = len(sents) // self.num_gpus
