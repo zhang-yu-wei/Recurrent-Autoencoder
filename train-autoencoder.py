@@ -75,20 +75,21 @@ if __name__ == '__main__':
     parser.add_argument('--embeddings',
                         help='Numpy embeddings file. If not supplied, '
                              'random embeddings are generated.')
-    parser.add_argument('vocab', help='Vocabulary file')
-    parser.add_argument('train', help='Training set')
-    parser.add_argument('valid', help='Validation set')
+    parser.add_argument('data', help='data directory name')
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
-    wd = utils.WordDictionary(args.vocab)
+    path = args.data + 'vocabulary.txt'
+    wd = utils.WordDictionary(path)
     embeddings = load_or_create_embeddings(args.embeddings, wd.vocabulary_size,
                                            args.embedding_size)
 
     logging.info('Reading training data')
-    train_data = utils.load_binary_data(args.train)
+    path = args.data + 'train_data.npz'
+    train_data = utils.load_binary_data(path)
     logging.info('Reading validation data')
-    valid_data = utils.load_binary_data(args.valid)
+    path = args.data + 'valid_data.npz'
+    valid_data = utils.load_binary_data(path)
     logging.info('Creating model')
 
     model = autoencoder.TextAutoencoder(args.lstm_units,
@@ -102,10 +103,9 @@ if __name__ == '__main__':
     model.g.finalize()
     show_parameter_count(model.get_trainable_variables())
     logging.info('Initialized the model and all variables. Starting training.')
-    EPOHCS, losses_tra, losses_val = model.train(sess, args.save_dir, train_data, valid_data, args.batch_size,
+    EPOCHS, losses_tra, losses_val = model.train(sess, args.save_dir, train_data, valid_data, args.batch_size,
                 args.num_epochs, args.learning_rate,
                 args.dropout_keep, 5.0, report_interval=args.interval)
-
     f = h5py.File("losses.hdf5", "w")
     f['epochs'] = EPOCHS
     f['train'] = losses_tra
