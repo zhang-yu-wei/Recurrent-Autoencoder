@@ -4,10 +4,10 @@ import progressbar as pb
 class progress_timer:
 
     def __init__(self, n_iter, description="Something"):
-        self.n_iter         = n_iter
-        self.iter           = 0
-        self.description    = description + ': '
-        self.timer          = None
+        self.n_iter = n_iter
+        self.iter = 0
+        self.description = description + ': '
+        self.timer = None
         self.initialize()
 
     def initialize(self):
