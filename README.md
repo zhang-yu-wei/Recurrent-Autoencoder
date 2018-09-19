@@ -6,6 +6,7 @@ Environment
 -----------
 * python2 or python3
 * tensorflow
+* progressbar
 
 Prepare data
 -------------
