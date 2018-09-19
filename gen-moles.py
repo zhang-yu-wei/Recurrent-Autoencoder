@@ -1,8 +1,13 @@
+# -*- coding: utf-8 -*-
+
 from collections import Counter
 import numpy as np
 import random
 import argparse
 
+"""
+This file is used for generating molecule sentences
+"""
 
 def gen(input, output, max_atm_length, num_exm):
     # define which character is an atom
