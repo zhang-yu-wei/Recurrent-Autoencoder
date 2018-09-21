@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from collections import Counter
 import numpy as np
 import random
@@ -47,16 +45,13 @@ def gen(input, output, max_atm_length, num_exm):
         if total_atm_num > max_atm_length:
             continue
         else:
-            total_mole_num = sum(mole_num)
-            num_mole = 0
-            sent = ''
+            sent = []
             for j in range(max_atm_num):
                 for k in range(mole_num[j]):
-                    sent += random.sample(bins[j + 1], 1)[0]
-                    num_mole += 1
-                    if num_mole < total_mole_num:
-                        sent += ' '
-            sents.append(sent)
+                    sent.append(random.sample(bins[j + 1], 1)[0])
+            random.shuffle(sent)
+            str_sent = ' '.join(sent)
+            sents.append(str_sent)
             pt.update()
     pt.finish()
     # save sentences
@@ -78,3 +73,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     gen(args.input, args.output, args.max_atm_length, args.num_exm)
+
