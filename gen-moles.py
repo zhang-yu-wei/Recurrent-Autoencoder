@@ -64,13 +64,21 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('input', help='dictionary with one word on a line, '
                         'without .txt')
-    parser.add_argument('output', help='save path, without .txt')
-    parser.add_argument('-n', help='number of examples',
-                        dest='num_exm', default=10000, type=int)
+    parser.add_argument('train_output', help='training data save path, without .txt')
+    parser.add_argument('test_output', help='test data save path, without .txt')
+
+    parser.add_argument('-ntr', help='number of training examples',
+                        dest='num_train', default=50000, type=int)
+    parser.add_argument('-nte', help='numberof test examples',
+                        dest='num_test', default=100, type=int)
     parser.add_argument('-a', help='maximum atom number in one sentence',
                         dest='max_atm_length', type=int, default=256)
+    parser.add_argument('-m', )
 
     args = parser.parse_args()
 
-    gen(args.input, args.output, args.max_atm_length, args.num_exm)
+    print("generating training examples...")
+    gen(args.input, args.train_output, args.max_atm_length, args.num_train)
 
+    print("generating test examples...")
+    gen(args.input, args.test_output, args.max_atm_length, args.num_test)
