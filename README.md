@@ -23,3 +23,7 @@ Test it
 -------
 1. Use __interactive.py__ to test if the neural net can give the same thing as your input. After opening this file, you can see a interactive environment, you can type in your sentence, after "in:" shows up. And the result will automatically shows up after "ou:". Use `python interactive.py -h`
 2. Use __codify-sentences.py__ to translate molecule sentences into vectors. You need a file contains several molecule sentences in it. And it will give you a '.npy' file which contains state arrays in it.
+
+Reference
+---------
+https://papers.nips.cc/paper/5346-sequence-to-sequence-learning-with-neural-networks.pdf
